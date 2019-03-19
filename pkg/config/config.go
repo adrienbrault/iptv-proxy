@@ -1,6 +1,10 @@
 package config
 
-import "github.com/jamesnetherton/m3u"
+import (
+	"net/url"
+
+	"github.com/jamesnetherton/m3u"
+)
 
 // HostConfiguration containt host infos
 type HostConfiguration struct {
@@ -12,6 +16,7 @@ type HostConfiguration struct {
 type ProxyConfig struct {
 	Playlist   *m3u.Playlist
 	HostConfig *HostConfiguration
+	RemoteURL  *url.URL
 	//XXX Very unsafe
 	User, Password string
 }

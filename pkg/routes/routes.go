@@ -53,6 +53,8 @@ func Routes(proxyConfig *config.ProxyConfig, r *gin.RouterGroup, newM3U []byte) 
 	// XXX Private need for external Android app
 	r.POST("/iptv.m3u", p.authenticate, p.getM3U)
 
+	r.GET("/xmltv", p.authenticate, p.xmltv)
+
 	for i, track := range proxyConfig.Playlist.Tracks {
 		oriURL, err := url.Parse(track.URI)
 		if err != nil {
@@ -65,6 +67,38 @@ func Routes(proxyConfig *config.ProxyConfig, r *gin.RouterGroup, newM3U []byte) 
 		}
 		r.GET(oriURL.RequestURI(), p.authenticate, tmp.reverseProxy)
 	}
+}
+
+func (p *proxy) xmltv(c *gin.Context) {
+
+	remoteHostURL := p.ProxyConfig.RemoteURL
+	var remoteHost string
+	if remoteHostURL.Port() != "" {
+		remoteHost = fmt.Sprintf("%s:%s", remoteHostURL.Hostname(), remoteHostURL.Port())
+	} else {
+		remoteHost = remoteHostURL.Hostname()
+	}
+
+	params := remoteHostURL.Query()
+
+	user := params.Get("username")
+	pass := params.Get("password")
+	url, err := url.Parse(
+		fmt.Sprintf("http://%s/xmltv.php?username=%s&password=%s", remoteHost, user, pass),
+	)
+
+	resp, err := http.Get(url.String())
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	copyHTTPHeader(c, resp.Header)
+	c.Stream(func(w io.Writer) bool {
+		io.Copy(w, resp.Body)
+		return false
+	})
 }
 
 func (p *proxy) reverseProxy(c *gin.Context) {
