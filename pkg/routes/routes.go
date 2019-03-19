@@ -103,6 +103,12 @@ func (p *proxy) xmltv(c *gin.Context) {
 	}
 	bodyString := string(bodyBytes)
 
+	err = ioutil.WriteFile("./epgdata.xml", []byte(bodyString), 0644)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
 	log.Println(bodyString)
 
 	// copyHTTPHeader(c, resp.Header)
