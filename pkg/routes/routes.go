@@ -3,6 +3,7 @@ package routes
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -95,11 +96,20 @@ func (p *proxy) xmltv(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 
-	copyHTTPHeader(c, resp.Header)
-	c.Stream(func(w io.Writer) bool {
-		io.Copy(w, resp.Body)
-		return false
-	})
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	bodyString := string(bodyBytes)
+
+	log.Println(bodyString)
+
+	// copyHTTPHeader(c, resp.Header)
+	// c.Stream(func(w io.Writer) bool {
+	// 	io.Copy(w, resp.Body)
+	// 	return false
+	// })
 }
 
 func (p *proxy) reverseProxy(c *gin.Context) {
