@@ -54,6 +54,7 @@ func Routes(proxyConfig *config.ProxyConfig, r *gin.RouterGroup, newM3U []byte) 
 	r.POST("/iptv.m3u", p.authenticate, p.getM3U)
 
 	r.POST("/xmltv", p.authenticate, p.xmltv)
+	r.GET("/xmltv", p.authenticate, p.xmltv)
 
 	for i, track := range proxyConfig.Playlist.Tracks {
 		oriURL, err := url.Parse(track.URI)
