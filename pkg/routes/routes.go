@@ -90,8 +90,8 @@ func (p *proxy) iptvSmarterAPP(c *gin.Context) {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
-
 	req.URL = newURL
+	req.RequestURI = ""
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
