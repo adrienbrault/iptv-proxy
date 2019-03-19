@@ -3,6 +3,7 @@ package routes
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -101,11 +102,20 @@ func (p *proxy) iptvSmarterAPP(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	bodyString := string(bodyBytes)
+
+	log.Println(bodyString)
+
 	copyHTTPHeader(c, resp.Header)
-	c.Stream(func(w io.Writer) bool {
-		io.Copy(w, resp.Body)
-		return false
-	})
+
+	ctype := resp.Header.Get("Content-Type")
+
+	c.Data(http.StatusOK, ctype, bodyBytes)
+	// c.Stream(func(w io.Writer) bool {
+	// 	io.Copy(w, resp.Body)
+	// 	return false
+	// })
 }
 
 func (p *proxy) reverseProxy(c *gin.Context) {
