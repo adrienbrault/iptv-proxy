@@ -84,6 +84,7 @@ func (p *proxy) iptvSmarterAPP(c *gin.Context) {
 
 	req := c.Request
 
+	req.Host = remoteHostURL.Hostname()
 	newURL, err := url.Parse(fmt.Sprintf("http://%s%s", remoteHost, req.URL.RequestURI()))
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
