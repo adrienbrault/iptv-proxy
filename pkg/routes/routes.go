@@ -3,7 +3,6 @@ package routes
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -54,8 +53,11 @@ func Routes(proxyConfig *config.ProxyConfig, r *gin.RouterGroup, newM3U []byte) 
 	// XXX Private need for external Android app
 	r.POST("/iptv.m3u", p.authenticate, p.getM3U)
 
-	r.POST("/xmltv", p.authenticate, p.xmltv)
-	r.GET("/xmltv", p.authenticate, p.xmltv)
+	//IPTV Smarter android app compatibility
+	r.POST("/player_api.php", p.iptvSmarterAPP)
+	r.GET("/player_api.php", p.iptvSmarterAPP)
+	r.POST("/xmltv.php", p.iptvSmarterAPP)
+	r.GET("/xmltv.php", p.iptvSmarterAPP)
 
 	for i, track := range proxyConfig.Playlist.Tracks {
 		oriURL, err := url.Parse(track.URI)
@@ -71,8 +73,7 @@ func Routes(proxyConfig *config.ProxyConfig, r *gin.RouterGroup, newM3U []byte) 
 	}
 }
 
-func (p *proxy) xmltv(c *gin.Context) {
-
+func (p *proxy) iptvSmarterAPP(c *gin.Context) {
 	remoteHostURL := p.ProxyConfig.RemoteURL
 	var remoteHost string
 	if remoteHostURL.Port() != "" {
@@ -81,41 +82,29 @@ func (p *proxy) xmltv(c *gin.Context) {
 		remoteHost = remoteHostURL.Hostname()
 	}
 
-	params := remoteHostURL.Query()
+	req := c.Request
 
-	user := params.Get("username")
-	pass := params.Get("password")
-	url, err := url.Parse(
-		fmt.Sprintf("http://%s/xmltv.php?username=%s&password=%s", remoteHost, user, pass),
-	)
+	newURL, err := url.Parse(fmt.Sprintf("http://%s%s", remoteHost, req.URL.RequestURI()))
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
 
-	resp, err := http.Get(url.String())
+	req.URL = newURL
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 	defer resp.Body.Close()
 
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
-		return
-	}
-	bodyString := string(bodyBytes)
-
-	err = ioutil.WriteFile("./epgdata.xml", []byte(bodyString), 0644)
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
-		return
-	}
-
-	log.Println(bodyString)
-
-	// copyHTTPHeader(c, resp.Header)
-	// c.Stream(func(w io.Writer) bool {
-	// 	io.Copy(w, resp.Body)
-	// 	return false
-	// })
+	copyHTTPHeader(c, resp.Header)
+	c.Stream(func(w io.Writer) bool {
+		io.Copy(w, resp.Body)
+		return false
+	})
 }
 
 func (p *proxy) reverseProxy(c *gin.Context) {
